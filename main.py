@@ -1,9 +1,13 @@
 import json, time
+from io import BytesIO
 from custom_detector import detect
-from flask import Flask, Response
+from flask import Flask, Response, send_file
+from flask_cors import CORS
 from threading import Thread
 
 app = Flask(__name__)
+cors = CORS(app)
+
 
 DETECTING = False
 FRAME = b''
@@ -17,11 +21,14 @@ def make_detections():
             FRAME = frame
         DETECTIONS = detections
 
+def get_frame():
+    return b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + FRAME + b'\r\n\r\n'
+
 def frame_generator():
     while True:
         time.sleep(0.5)
         if FRAME:
-            yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + FRAME + b'\r\n\r\n'
+            yield get_frame()
 
 def detections_generator():
     if DETECTIONS:
@@ -36,6 +43,13 @@ def video_feed():
 def detections():
     if not DETECTING: Thread(target=make_detections).start()
     return Response(detections_generator(), mimetype='application/json')
+
+@app.route('/capture')
+def capture():
+    if FRAME:
+        img_io = BytesIO(FRAME)
+        img_io.seek(0)
+        return send_file(img_io, mimetype='image/jpeg')
 
 if __name__ == '__main__':
     app.run(debug=True)

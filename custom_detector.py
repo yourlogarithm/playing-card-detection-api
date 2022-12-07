@@ -15,7 +15,7 @@ IOU_THRESH = 0.45
 
 class Detection:
     def __init__(self, label, xyxy, conf) -> None:
-        self.label = label
+        self.label = label.split(' ')[0]
         self.coords = xyxy
         self.conf = conf
 
